@@ -35,11 +35,11 @@ def main():
     db_name = reg_db.split("/")[1].split(".")[0]
     feats_out = open('output/' + '{}_{}_promoter_annotations.csv'.format(db_name, confidence), 'w')
     int_regs_out = open('output/' + '{}_{}_intergenic_regions.csv'.format(db_name, confidence), 'w')
+    int_reg_seqs_out = open('output/' + '{}_{}_extracted_promoter_sequences.fasta'.format(db_name, confidence), 'w')
 
     ### load reference genome
     for genome_k12 in SeqIO.parse(reference, "genbank"):
         print(repr(genome_k12.seq))
-        print(len(genome_k12))
 
     ### filter promoters with desired confidence level
     print('\n' + "Filtering promoters with", confidence, "confidence level.")
@@ -109,7 +109,7 @@ def main():
             ### shorten searching range towards 3' end of + strand
             for nt in range(tss, tss+1501, 10):
                 for feature in genome_k12.features:
-                    ### correction for promoters spanning through ori in circular chromosome
+                    ### correction for intergenic regions spanning through ori in circular chromosome
                     if nt > len(genome_k12):
                         nt0 = nt - len(genome_k12)
                         if all([nt0 in feature, feature.type not in feat]):
@@ -128,7 +128,7 @@ def main():
             ### shorten searching range towards 5' end of + strand
             for bp in range(tss, tss-1501, -10):
                 for feature in genome_k12.features:
-                    ### correction for promoters spanning through ori in circular chromosome
+                    ### correction for intergenic regions spanning through ori in circular chromosome
                     if bp < 0:
                         bp0 = len(genome_k12) + bp
                         if all([bp0 in feature, feature.type not in feat]):
@@ -171,8 +171,8 @@ def main():
             ### get length of intergenic region
             if all([isinstance(codon, int), isinstance(int_reg_end, int)]):
                 int_reg_len = abs(codon-int_reg_end)
-                ### correction for promoters spanning through ori in circular chromosome
-                if int_reg_len > 4000000:
+                ### correction for intergenic regions spanning through ori in circular chromosome
+                if int_reg_len > 3000:
                     if codon < int_reg_end:
                         int_reg_len = abs(int_reg_end-len(genome_k12)+codon)
                     else:
@@ -183,6 +183,30 @@ def main():
             entry = [id, str(tss), str(codon), str(int_reg_end), str(int_reg_len), strand, '\n']
             row = ','.join(entry)
             int_regs_out.write(row)
+
+    ### extract intergenic regions with extra 100bp upstream and downstream
+    print('\n' + "Extracting intergenic regions from", reference, ":")
+    pbar = tqdm(int_regs)
+    for key in pbar:
+        pbar.set_description("Processing %s" % id)
+        down = int_regs[key][0]
+        up = int_regs[key][1]
+        strand = int_regs[key][2]
+        int_reg_seqs_out.write(">" + genome_k12.id + "_" + reference.split("/")[1].split(".")[0] + "_" + key + "_" + strand + "\n")
+        ### correction for intergenic regions spanning through ori in circular chromosome
+        if abs(down-up) > 3000:
+            if down < up:
+                int_reg_seqs_out.write("%s" % genome_k12.seq[up-100:len(genome_k12.seq)+1])
+                int_reg_seqs_out.write("%s\n" % genome_k12.seq[0:down+101])
+            else:
+                int_reg_seqs_out.write("%s" % genome_k12.seq[down-100:len(genome_k12.seq)+1])
+                int_reg_seqs_out.write("%s\n" % genome_k12.seq[0:up+101])
+        ### all other intergenic regions
+        else:
+            if down < up:
+                int_reg_seqs_out.write("%s\n" % genome_k12.seq[down-100:up+101])
+            else:
+                int_reg_seqs_out.write("%s\n" % genome_k12.seq[up-100:down+101])
 
 if __name__ == '__main__':
     main()
