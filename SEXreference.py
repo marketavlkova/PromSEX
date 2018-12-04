@@ -39,6 +39,7 @@ def main():
     ### load reference genome
     for genome_k12 in SeqIO.parse(reference, "genbank"):
         print(repr(genome_k12.seq))
+        print(len(genome_k12))
 
     ### filter promoters with desired confidence level
     print('\n' + "Filtering promoters with", confidence, "confidence level.")
@@ -98,30 +99,50 @@ def main():
             feat = feats_fin[id][0]
             strand = filtered_dict[id][0]
             tss = filtered_dict[id][1]
-            codon = 0
-            int_reg_end = 0
-            int_reg_len = 0
-            end1 = 0
-            end2 = 0
-            end3 = 0
-            end4 = 0
+            codon = None
+            int_reg_end = None
+            int_reg_len = None
+            end1 = None
+            end2 = None
+            end3 = None
+            end4 = None
             ### shorten searching range towards 3' end of + strand
-            for nt in range(tss, tss+1001, 10):
+            for nt in range(tss, tss+1501, 10):
                 for feature in genome_k12.features:
+                    ### correction for promoters spanning through ori in circular chromosome
+                    if nt > len(genome_k12):
+                        nt0 = nt - len(genome_k12)
+                        if all([nt0 in feature, feature.type not in feat]):
+                            if nt0-11 < 0:
+                                end1 = abs(len(genome_k12) + nt0-11)
+                            else:
+                                end1 = nt0-11
+                            end2 =nt0+1
+                            break
                     if all([nt in feature, feature.type not in feat]):
                         end2 = nt+1
                         end1 = nt-11
                         break
-                if end2 != 0:
+                if isinstance(end2, int):
                     break
             ### shorten searching range towards 5' end of + strand
-            for bp in range(tss, tss-1001, -10):
+            for bp in range(tss, tss-1501, -10):
                 for feature in genome_k12.features:
+                    ### correction for promoters spanning through ori in circular chromosome
+                    if bp < 0:
+                        bp0 = len(genome_k12) + bp
+                        if all([bp0 in feature, feature.type not in feat]):
+                            if bp0+11 > len(genome_k12):
+                                end4 = abs(bp0+11 - len(genome_k12))
+                            else:
+                                end4 = bp0+11
+                            end3 = bp0-1
+                            break
                     if all([bp in feature, feature.type not in feat]):
                         end4 = bp+11
                         end3 = bp-1
                         break
-                if end4 != 0:
+                if isinstance(end4, int):
                     break
             ### find exact 3' position of intergenic region - considering '+ strand'
             if isinstance(end2, int):
@@ -133,7 +154,7 @@ def main():
                             else:
                                 int_reg_end = nt2+1
                             break
-                    if any([codon != 0, int_reg_end != 0]):
+                    if any([isinstance(codon, int), isinstance(int_reg_end, int)]):
                         break
             ### find exact 5' position of intergenic region - considetin '+ strand'
             if isinstance(end4, int):
@@ -145,10 +166,17 @@ def main():
                             else:
                                 codon = bp2+1
                             break
-                    if all([int_reg_end != 0, codon != 0]):
+                    if all([isinstance(codon, int), isinstance(int_reg_end, int)]):
                         break
             ### get length of intergenic region
-            int_reg_len = abs(codon-int_reg_end)
+            if all([isinstance(codon, int), isinstance(int_reg_end, int)]):
+                int_reg_len = abs(codon-int_reg_end)
+                ### correction for promoters spanning through ori in circular chromosome
+                if int_reg_len > 4000000:
+                    if codon < int_reg_end:
+                        int_reg_len = abs(int_reg_end-len(genome_k12)+codon)
+                    else:
+                        int_reg_len = abs(codon-len(genome_k12)+int_reg_end)
             ### store positions in dictionary
             int_regs[id] = [codon, int_reg_end, strand]
             ### writting output file
