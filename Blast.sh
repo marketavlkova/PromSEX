@@ -37,5 +37,5 @@ do
   IN_DB="${FILE#*/*/}"
   OUT_FILE="${IN_DB%.*}_blasted.txt"
   printf "Blasting $IN_DB \n"
-  blastn -db $DB_PATH/"${IN_DB%.*}" -query $QUERY_FILE -strand both -task megablast -evalue 1e-10 -out output/blast_results/$OUT_FILE -num_threads 4
+  blastn -db $DB_PATH/"${IN_DB%.*}" -query $QUERY_FILE -strand both -task megablast -evalue 1e-10 -out output/blast_results/$OUT_FILE -outfmt "6 std" -num_threads 4
 done
