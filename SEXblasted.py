@@ -92,7 +92,7 @@ def main():
             for line in SeqIO.parse(file, "fasta"):
                 ### if there is such promoter present in that file, add it to the promoter output file
                 if "_{}_".format(promoter) in repr(line.id):
-                    out_by_prom.write(">%s|SC1_%s\n%s\n" % (line.id.split("\n")[0], file.split("_")[2], line.seq))
+                    out_by_prom.write(">SC1_%s|%s\n%s\n" % (file.split("_")[2], line.id.split("\n")[0], line.seq))
 
 
 if __name__ == '__main__':
