@@ -2,7 +2,8 @@
 ### from K12 genome according to a given RegulonDB promoter
 ### database
 
-### example to run: python3 SEXreference.py <directory>/<RegulonDB csv file> <directory>/<genome GenBank file> [confidence level - optional]
+### example to run: python3 SEXreference.py <path to filtered RegulonDB csv file> <path to genome GenBank file> [confidence level - optional]
+### e.g.: python3 SEXreference.py output/RDBex.csv input/MG1655_genome.gb Strong
 
 import sys
 import csv
@@ -29,6 +30,7 @@ def main():
     if len(sys.argv) > 3:
         confidence = sys.argv[3]
     else:
+        confidence = None
         print("Confidence level not stated - taking all proposed promoters")
 
     ### define output files
