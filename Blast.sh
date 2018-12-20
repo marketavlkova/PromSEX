@@ -2,34 +2,25 @@
 ### script blasting intergenic sequences obtained by SEXreference.py
 ### againts databases of other genomes - which is can also create if needed
 
-### example to run: bash Blast.sh
+### example to run: ./Blast.sh [should be database created? Yes/No] <path to fasta file with K12 intergenic regions>
 
-### ask whether blast database should be made
-printf "Do you wish to make blast databases? (y/n) \n"
-read ANS
-if [ "$ANS" != "${ANS#[Yy]}" ]
+### set path to blast database
+DB_PATH="input/Database"
+### set path to query file
+QUERY_FILE=$2
+
+### check whether blast database should be made
+if [ "$1" != "${1#[Yy]}" ]
 then
-  DB_PATH="input/Database"
-  printf "Enter path to fasta file/s the database/s should be made from: \n"
-  read FAS
-  printf "Enter type of database to be made: (nucl/prot) \n"
-  read DBT
   ### loop through all fasta (fsa) genomes provided and make database from each of them
-  for FASTA in $FAS/*/*.fsa
+  for FASTA in input/marketa_genomes/*/*.fsa
   do
     PRE_DB="${FASTA#*/*/*/}"
     FIN_DB="${PRE_DB%.*}"
     printf "Making $OUT_DB blast database: \n"
-    makeblastdb -in $FASTA -dbtype $DBT -out $DB_PATH/$FIN_DB
+    makeblastdb -in $FASTA -dbtype nucl -out $DB_PATH/$FIN_DB
   done
-else
-  printf "Enter path to your database/s: \n"
-  read DB_PATH
 fi
-
-### prompt for query file (fasta output from SEXreference.py)
-printf "Enter your query sequence file (including the path to it): \n"
-read QUERY_FILE
 
 ### blasting
 for FILE in $DB_PATH/*.nhr
