@@ -29,7 +29,7 @@ def main():
     ### read all files with blast results
     blast_results = glob.glob(blast_dir + '*.txt')
 
-    print("Extracting blasted promoters.")
+    print("\nExtracting blasted promoters.")
     pbar = tqdm(blast_results)
     ### go throught all strain files with blast results
     for strain in pbar:
@@ -76,7 +76,7 @@ def main():
     ### read all files from previous step
     blast_extracted = glob.glob('output/blasted_promoters/' + '*{}included.fasta'.format(diff))
 
-    print("Creating separated file for each promoter.")
+    print("\nCreating separated file for each promoter.")
     pbar = tqdm(SeqIO.parse(k12_proms, "fasta"), total=get_num_lines(k12_proms)//2)
     ### loop through all lines in file with extracted k12 intergenic regions
     for entry in pbar:

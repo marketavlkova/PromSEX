@@ -17,7 +17,6 @@ then
   do
     PRE_DB="${FASTA#*/*/*/}"
     FIN_DB="${PRE_DB%.*}"
-    printf "Making $OUT_DB blast database: \n"
     makeblastdb -in $FASTA -dbtype nucl -out $DB_PATH/$FIN_DB
   done
 fi
