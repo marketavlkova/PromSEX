@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 ### joint lines with the same ID
 ### example to run: ./JoinLines.awk <input file> > <output file>
-### e.g.: ./JoinLines.awk output/alignments/alkAp_-100.included.aln > output/alkAp_-100included.txt
+### e.g.: ./JoinLines.awk output/alignments/alkAp_-100included.aln > output/alignments/alkAp_-100included.txt
 
 {
   ID=$1;
