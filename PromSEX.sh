@@ -73,3 +73,20 @@ do
   printf "Extracting total identity values from Identities-${DIF}00.txt\n"
   ./IDextract.awk "output/Identities-${DIF}00.txt" > "output/TotalIdent-${DIF}00.csv"
 done
+
+### get files of aligned promoters having each sequence on one line only
+for DIF in {1..2}
+do
+  for file in output/alignments/*"${DIF}"00*.aln
+  do
+    OUT="${file%.aln}.txt"
+    ./JoinLines.awk $file > $OUT
+  done
+done
+
+### get number of sequence variants for each promoter among the strains
+printf "Pulling out numbers of existing promoter versions\n"
+for DIF in {1..2}
+do
+  cat output/alignments/*"${DIF}"00*.txt | ./PromVerCount.awk > "output/VariantCounts-${DIF}00.csv"
+done
