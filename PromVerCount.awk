@@ -2,6 +2,7 @@
 ### count how many versions of each promoter exist among our strains
 ### example to run: cat <path to input files> | ./JPromVerCount.awk > <path to output file>
 ### cat output/alignments/*100*.txt | ./PromVerCount.awk > output/VariantCounts-100.csv
+### !!! note that array variable assignment: ARRAY[I]=X[Y] is not supported in Linux's awk !!!
 
 BEGIN{
   ### print column description
