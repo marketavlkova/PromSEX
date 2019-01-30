@@ -38,11 +38,21 @@ def main():
         ### generate Position Specific Score Matrix
         pssm = summ.pos_specific_score_matrix(cons, chars_to_ignore = [ 'N' ])
         s = 0
-        ### count number of segregation sites in this alignment
+        ### count number of segregation sites in this alignment (excluding indels)
         for nt in range(0, len):
             base = align[0][nt]
             if (pssm[nt][base] != nstr):
-                s += 1
+                if ('-' in pssm[nt]):
+                    if (pssm[nt]['-'] > 0):
+                        for i in pssm[nt]:
+                            if all([i != '-', pssm[nt][i] > 0]):
+                                if ((pssm[nt][i] + pssm[nt]['-']) != nstr):
+                                    s += 1
+                                    break
+                    else:
+                        s += 1
+                else:
+                    s += 1
 
         ### add acquired values to the output file
         out_file.write("%s,%s,%s,%s\n" % (promoter, s, nstr, len))
