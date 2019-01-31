@@ -17,7 +17,7 @@ BEGIN{
     N+=1;
   }
   ### print total percent identity of the promoter among strains
-  if (($1 ~ /^TOT/) && ($4 !~ /nan/)) {
+  if (($1 ~ /^TOT/)) {
     printf "%s,%s,%s\n", P[4], $4, N-1;
   }
 
