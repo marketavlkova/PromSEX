@@ -90,3 +90,10 @@ for DIF in {1..2}
 do
   cat output/alignments/*"${DIF}"00*.txt | ./PromVerCount.awk > "output/VariantCounts-${DIF}00.csv"
 done
+
+### get number of segregating sites for each promoter alignment
+printf "Pulling out information about segregating sites\n"
+for DIF in {1..2}
+do
+  python3 SeqSites.py output/alignments/ "${DIF}00"
+done
