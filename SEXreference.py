@@ -41,7 +41,7 @@ def main():
 
     ### load reference genome
     for genome_k12 in SeqIO.parse(reference, "genbank"):
-        print(repr(genome_k12.seq))
+        print('\n')
 
     ### filter promoters with desired confidence level
     print('\n' + "Filtering promoters with", confidence, "confidence level.")
@@ -98,7 +98,7 @@ def main():
     for id in pbar:
         if len(feats_fin[id]) == 1:
             pbar.set_description("Processing %s" % id)
-            feat = feats_fin[id][0]
+            # feat = feats_fin[id][0]
             strand = filtered_dict[id][0]
             tss = filtered_dict[id][1]
             codon = None
@@ -114,14 +114,14 @@ def main():
                     ### correction for intergenic regions spanning through ori in circular chromosome
                     if nt > len(genome_k12):
                         nt0 = nt - len(genome_k12)
-                        if all([nt0 in feature, feature.type not in feat]):
+                        if all([nt0 in feature, 'gene' in feature.type]):
                             if nt0-11 < 0:
                                 end1 = abs(len(genome_k12) + nt0-11)
                             else:
                                 end1 = nt0-11
                             end2 =nt0+1
                             break
-                    if all([nt in feature, feature.type not in feat]):
+                    if all([nt in feature, 'gene' in feature.type]):
                         end2 = nt+1
                         end1 = nt-11
                         break
@@ -133,14 +133,14 @@ def main():
                     ### correction for intergenic regions spanning through ori in circular chromosome
                     if bp < 0:
                         bp0 = len(genome_k12) + bp
-                        if all([bp0 in feature, feature.type not in feat]):
+                        if all([bp0 in feature, 'gene' in feature.type]):
                             if bp0+11 > len(genome_k12):
                                 end4 = abs(bp0+11 - len(genome_k12))
                             else:
                                 end4 = bp0+11
                             end3 = bp0-1
                             break
-                    if all([bp in feature, feature.type not in feat]):
+                    if all([bp in feature, 'gene' in feature.type]):
                         end4 = bp+11
                         end3 = bp-1
                         break
@@ -150,7 +150,7 @@ def main():
             if isinstance(end2, int):
                 for nt2 in range(end1, end2, 1):
                     for feature in genome_k12.features:
-                        if all([nt2 in feature, feature.type not in feat]):
+                        if all([nt2 in feature, 'gene' in feature.type]):
                             if 'forward' in strand:
                                 codon = nt2+1
                             else:
@@ -162,7 +162,7 @@ def main():
             if isinstance(end4, int):
                 for bp2 in range(end4, end3, -1):
                     for feature in genome_k12.features:
-                        if all([bp2 in feature, feature.type not in feat]):
+                        if all([bp2 in feature, 'gene' in feature.type]):
                             if 'forward' in strand:
                                 int_reg_end = bp2+1
                             else:
@@ -190,7 +190,7 @@ def main():
     print('\n' + "Extracting intergenic regions from", reference, ":")
     pbar = tqdm(int_regs)
     for key in pbar:
-        pbar.set_description("Processing %s" % id)
+        pbar.set_description("Processing %s" % key)
         down = int_regs[key][0]
         up = int_regs[key][1]
         strand = int_regs[key][2]
