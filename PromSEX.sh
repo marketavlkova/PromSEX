@@ -95,5 +95,5 @@ done
 printf "Pulling out information about segregating sites\n"
 for DIF in {1..2}
 do
-  python3 SeqSites.py output/alignments/ "${DIF}00"
+  python3 SegSites.py output/alignments/ "${DIF}00"
 done
