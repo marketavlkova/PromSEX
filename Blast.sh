@@ -2,10 +2,11 @@
 ### script blasting intergenic sequences obtained by SEXreference.py
 ### againts databases of other genomes - which is can also create if needed
 
-### example to run: ./Blast.sh [should be database created? Yes/No] <path to fasta file with K12 intergenic regions>
+### example to run: ./Blast.sh [should be database created? Yes/No] <path to fasta file with K12 intergenic regions> <path to output files>
 
-### set path to blast database
+### set path to blast database and output files
 DB_PATH="input/Database"
+OUT_PATH=$3
 ### set path to query file
 QUERY_FILE=$2
 
@@ -27,5 +28,5 @@ do
   IN_DB="${FILE#*/*/}"
   OUT_FILE="${IN_DB%.*}_blasted.txt"
   printf "Blasting $IN_DB \n"
-  blastn -db $DB_PATH/"${IN_DB%.*}" -query $QUERY_FILE -strand both -task megablast -evalue 1e-10 -out output/blast_results/$OUT_FILE -outfmt "6 std" -num_threads 4
+  blastn -db $DB_PATH/"${IN_DB%.*}" -query $QUERY_FILE -strand both -task megablast -evalue 1e-10 -out $OUT_PATH$OUT_FILE -outfmt "6 std" -num_threads 4
 done
