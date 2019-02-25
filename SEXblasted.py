@@ -1,7 +1,7 @@
 ### Script which extracts promoter sequences according to blast search
 
-### example to run: python3 SEXblasted.py <extracted K12 promoters - fasta file> <path to blast results> <path to env. strains' genomes in fasta> <number of which alignment length can be smaller than k12 promoter to be included>
-### e.g.: python3 SEXblasted.py output/RDBex_Strong_eps.fasta output/blast_results/ input/marketa_genomes/ 100
+### example to run: python3 SEXblasted.py <extracted K12 promoters - fasta file> <path to blast results> <path to env. strains' genomes in fasta> <path to output directory> <number of which alignment length can be smaller than k12 promoter to be included>
+### e.g.: python3 SEXblasted.py output/RDBex_Strong_eps.fasta output/blast_results/ input/marketa_genomes/ output/blasted_promoters/ 100
 
 import sys
 import glob
@@ -24,7 +24,8 @@ def main():
     k12_proms = sys.argv[1]
     blast_dir = sys.argv[2]
     strains_dir = sys.argv[3]
-    diff = sys.argv[4]
+    out_dir = sys.argv[4]
+    diff = sys.argv[5]
 
     ### read all files with blast results
     blast_results = glob.glob(blast_dir + '*.txt')
@@ -33,11 +34,11 @@ def main():
     pbar = tqdm(blast_results)
     ### go throught all strain files with blast results
     for strain in pbar:
-        str = strain.split("/")[2]
+        str = strain.split("/")[len(strain.split("/"))-1]
         pbar.set_description("Processing %s" % str)
         with open(strain, 'r') as file:
             ### make a separate file for each strain
-            prom_out = open('output/blasted_promoters/' + '{}_-{}included.fasta'.format(str.split(".")[0], diff), 'w')
+            prom_out = open(out_dir + '{}_-{}included.fasta'.format(str.split(".")[0], diff), 'w')
             ### loop through all line in strain's blast results
             for row in file:
                 ### save important variables from blast results
@@ -74,7 +75,7 @@ def main():
                                             prom_out.write("-\n%s\n" % reverse_complement(fsa.seq[send-1:sstart]))
 
     ### read all files from previous step
-    blast_extracted = glob.glob('output/blasted_promoters/' + '*{}included.fasta'.format(diff))
+    blast_extracted = glob.glob(out_dir + '*{}included.fasta'.format(diff))
 
     print("\nCreating separated file for each promoter.")
     pbar = tqdm(SeqIO.parse(k12_proms, "fasta"), total=get_num_lines(k12_proms)//2)
@@ -84,7 +85,7 @@ def main():
         promoter = entry.id.split("_")[3]
         pbar.set_description("Processing %s" % promoter)
         ### create a separate file for each promoter
-        out_by_prom = open('output/blasted_promoters/by_promoter/' + '{}_-{}included.fasta'.format(promoter, diff), 'w')
+        out_by_prom = open(out_dir + 'by_promoter/' + '{}_-{}included.fasta'.format(promoter, diff), 'w')
         ### write k12 annotation and promoter sequence into it
         out_by_prom.write(">%s\n%s\n" % (entry.id, entry.seq))
         ### loop through all promoters filtered in previous step for all strains

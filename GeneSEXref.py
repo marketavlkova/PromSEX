@@ -265,7 +265,7 @@ def main():
         strand = gene_regs[key][2]
         gene_seqs_out.write(">" + genome_k12.id + "_" + reference.split("/")[1].split(".")[0] + "_" + key + "_" + strand + "\n")
         ### correction for genes spanning through ori in circular chromosome
-        if abs(down-up) > 3000:
+        if abs(down-up) > 10000:
             if down < up:
                 gene_seqs_out.write("%s" % genome_k12.seq[up:len(genome_k12.seq)+1])
                 gene_seqs_out.write("%s\n" % genome_k12.seq[0:down+1])
