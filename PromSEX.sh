@@ -37,7 +37,7 @@ then
 fi
 
 ### blast for homologous intergenic regions among environmental isolates
-./Blast.sh $MAKEDB ./output/*.fasta
+./Blast.sh $MAKEDB ./output/*.fasta output/blast_results/
 
 ### create output directories for intergenic regions of environmental isolates
 if [ ! -d "./output/blasted_promoters" ]
@@ -48,11 +48,8 @@ fi
 
 ### extract blasted intergenic regions from environmental strains
 ### if the hits are at least 100 and 200 bp shorter then apropriate K12 intergenic region
-for DIF in {1..2}
-do
-  printf "\nAnalysing blast hits that are at most ${DIF}00nt shorter than K12 reference"
-  python3 SEXblasted.py output/*.fasta output/blast_results/ input/marketa_genomes/ "${DIF}00"
-done
+printf "\nAnalysing blast hits that are at most 100nt shorter than K12 reference"
+python3 SEXblasted.py output/*.fasta output/blast_results/ input/marketa_genomes/ output/blasted_promoters/ 100
 
 ### create output directory for alignments
 if [ ! -d "./output/alignments" ]
@@ -61,39 +58,24 @@ then
 fi
 
 ### align homologous intergenic regions and calculate sequence identity values
-for DIF in {1..2}
-do
-  printf "\nAligning hits that are at most ${DIF}00nt shorter than K12 reference\n"
-  ./Align.sh output/blasted_promoters/by_promoter/ "${DIF}00"
-done
+printf "\nAligning hits that are at most 100nt shorter than K12 reference\n"
+./Align.sh output/blasted_promoters/by_promoter/ 100
 
 ### extract total identity values in a separated file
-for DIF in {1..2}
-do
-  printf "Extracting total identity values from Identities-${DIF}00.txt\n"
-  ./IDextract.awk "output/Identities-${DIF}00.txt" > "output/TotalIdent-${DIF}00.csv"
-done
+printf "Extracting total identity values from Identities-100.txt\n"
+./IDextract.awk output/Identities-100.txt > output/TotalIdent-100.csv
 
 ### get files of aligned promoters having each sequence on one line only
-for DIF in {1..2}
+for file in output/alignments/*.aln
 do
-  for file in output/alignments/*"${DIF}"00*.aln
-  do
-    OUT="${file%.aln}.txt"
-    ./JoinLines.awk $file > $OUT
-  done
+  OUT="${file%.aln}.txt"
+  ./JoinLines.awk $file > $OUT
 done
 
 ### get number of sequence variants for each promoter among the strains
 printf "Pulling out numbers of existing promoter versions\n"
-for DIF in {1..2}
-do
-  cat output/alignments/*"${DIF}"00*.txt | ./PromVerCount.awk > "output/VariantCounts-${DIF}00.csv"
-done
+cat output/alignments/*.txt | ./PromVerCount.awk > output/VariantCounts-100.csv
 
 ### get number of segregating sites for each promoter alignment
 printf "Pulling out information about segregating sites\n"
-for DIF in {1..2}
-do
-  python3 SegSites.py output/alignments/ "${DIF}00"
-done
+python3 SegSites.py output/alignments/ 100
