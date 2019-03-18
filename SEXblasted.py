@@ -35,10 +35,11 @@ def main():
     ### go throught all strain files with blast results
     for strain in pbar:
         str = strain.split("/")[len(strain.split("/"))-1]
+        str_only = str.split("_")[0] + "_" + str.split("_")[1]
         pbar.set_description("Processing %s" % str)
         with open(strain, 'r') as file:
             ### make a separate file for each strain
-            prom_out = open(out_dir + '{}_-{}included.fasta'.format(str.split(".")[0], diff), 'w')
+            prom_out = open(out_dir + '{}_-{}included.fasta'.format(str_only, diff), 'w')
             ### loop through all line in strain's blast results
             for row in file:
                 ### save important variables from blast results
@@ -61,10 +62,8 @@ def main():
                             ### continue only if promoter names are identical for k12 and tested strain
                             ### and at the same time the alighment length is not shorter then k12 intergenic region reduced by diff (value stated when running the script)
                             if all([prom_idf == prom_idp, int(align_length) >= prom_length-int(diff)]):
-                                ### extract just the strain name
-                                str_only = str.split("_")[1]
                                 ### loop through all sequences of that particular strain in its fasta file
-                                for fsa in SeqIO.parse(strains_dir + str_only + "/SC1_" + str_only + '.fsa', "fasta"):
+                                for fsa in SeqIO.parse(strains_dir + str_only + "/" + str_only + '.fsa', "fasta"):
                                     ### find the sequence where blast found a hit with the k12 intergenic region
                                     if node_idf in repr(fsa.id):
                                         ### and extract intergenic region of this particular strain
@@ -90,10 +89,12 @@ def main():
         out_by_prom.write(">%s\n%s\n" % (entry.id, entry.seq))
         ### loop through all promoters filtered in previous step for all strains
         for file in blast_extracted:
+            file_only = file.split("/")[len(file.split("/"))-1]
+            str_id = file_only.split("_")[0] + "_" + file_only.split("_")[1]
             for line in SeqIO.parse(file, "fasta"):
                 ### if there is such promoter present in that file, add it to the promoter output file
                 if "_{}_".format(promoter) in repr(line.id):
-                    out_by_prom.write(">SC1_%s|%s\n%s\n" % (file.split("_")[2], line.id.split("\n")[0], line.seq))
+                    out_by_prom.write(">%s|%s\n%s\n" % (str_id, line.id.split("\n")[0], line.seq))
 
 
 if __name__ == '__main__':
