@@ -5,19 +5,36 @@
 
 import sys
 import os.path
+import requests
 import pandas as pd
+from io import StringIO
 from bokeh.plotting import figure, output_file, show
-from bokeh.layouts import gridplot
+from bokeh.layouts import gridplot, layout
 from bokeh.models import ColumnDataSource, CDSView
 from bokeh.models.filters import GroupFilter
+from bokeh.models.widgets import Tabs, Panel
+from bokeh.palettes import Category10_10
 
 def main():
+
+    if os.path.isfile('output/MultiFunKey.csv'):
+        ### load file containing descriptions to BC group IDs
+        key = pd.read_csv('output/MultiFunKey.csv', delimiter = ':')
+        ### convert the key table into a dictionary
+        all_keys = dict([(i, a) for i, a in zip(key.ID, key.function)])
+        all_keys['ORFs'] = 'ORFs'
+        all_keys['Conserved-Hypothetical-ORFs'] = 'CH-ORFs'
+        all_keys['Unclassified-Genes'] = 'Unclassified'
 
     ### if the file for 'final_table' already exists
     ### load it and skip the part creating it
     if os.path.isfile('output/MultiFunPlotData.csv'):
         final_table = pd.read_csv('output/MultiFunPlotData.csv', delimiter = ',')
-    else:
+        ### define output file the the plot
+        output_file("output/BokehPlot.html")
+    elif os.path.isfile('output/AllGenes.csv'):
+        ### define output file the the plot
+        output_file("output/BokehPlot.html")
         ### load data files to check for mismatches in gene names after using EcoCyc
         ecocyc_in = pd.read_csv('output/AllGenes.csv', delimiter = ',')
         ecocyc_out = pd.read_csv('output/AllGenesCompare.txt', delimiter = '\t')
@@ -82,18 +99,28 @@ def main():
                     if (id == 0):
                         ### add the upper most BC group to the 'line' list
                         line.append(ids[id])
+                        ### get the description of the upper most BC group from the key dictionary
+                        for ak in all_keys.keys():
+                            if ids[id] == ak:
+                                line.append(all_keys[ak])
                     ### in all other rounds
                     else:
                         ### if the round number is lower than number of subgroups
                         if (id < len(ids)):
                             ### produce the current subgroup combining subgroup from the previous 'line' value and current extention to it
-                            bc = '.'.join([line[(id + 1)], ids[id]])
+                            bc = '.'.join([line[2 * id], ids[id]])
+                            ### get the description of the current subgroup from the key dictionary
+                            for ak in all_keys.keys():
+                                if bc == ak:
+                                    bckey = all_keys[ak]
                         ### if you run out of subgroup values
                         else:
                             ### set bc variable to NaN
                             bc = 'NaN'
-                        ### add the BC subgroup value to the 'line' list
+                            bckey = 'None'
+                        ### add the BC subgroup value and its description to the 'line' list
                         line.append(bc)
+                        line.append(bckey)
                 ### set variable to check for multiple Ide & Seg entries for the same gene
                 n = 0
                 ### loop through all row numbers of the table with Seg & Ide values together with gene names
@@ -111,54 +138,56 @@ def main():
                 vec.append(line)
 
         ### create dataframe out the the complete 'vec' list with specified column names
-        final_table = pd.DataFrame(vec, columns = ['ID', 'Gene', 'ParentBC0', 'ParentBC1', 'ParentBC2', 'ParentBC3', 'ParentBC4', 'PromIde', 'PromSeg', 'GeneIde', 'GeneSeg'])
+        final_table = pd.DataFrame(vec, columns = ['ID', 'Gene', 'BC0', 'BC0-fun', 'BC1', 'BC1-fun', 'BC2', 'BC2-fun', 'BC3', 'BC3-fun', 'BC4', 'BC4-fun', 'PromIde', 'PromSeg', 'GeneIde', 'GeneSeg'])
         ### save this dataframe as csv table
         final_table.to_csv('output/MultiFunPlotData.csv')
 
-    ### load file containing descriptions to BC group IDs
-    key = pd.read_csv('output/MultiFunKey.csv', delimiter = ':')
+    else:
+        ### load data file from github
+        url_data = requests.get('https://raw.githubusercontent.com/marketavlkova/PromSEX/master/MultiFunPlotData.csv').content
+        final_table = pd.read_csv(StringIO(url_data.decode('utf-8')))
+        del final_table['Unnamed: 0']
+
+        url_key = requests.get('https://raw.githubusercontent.com/marketavlkova/PromSEX/master/MultiFunKey.csv').content
+        key = pd.read_csv(StringIO(url_key.decode('utf-8')), delimiter = ':')
+        ### convert the key table into a dictionary
+        all_keys = dict([(i, a) for i, a in zip(key.ID, key.function)])
+        all_keys['ORFs'] = 'ORFs'
+        all_keys['Conserved-Hypothetical-ORFs'] = 'CH-ORFs'
+        all_keys['Unclassified-Genes'] = 'Unclassified'
+        ### define output file the the plot
+        output_file("BokehPlot.html")
+
 
     #########################################
     ######## GENERAL PLOT DEFINITION ########
     #########################################
-    ### define output file the the plot
-    output_file("output/BC0.html")
     ### define tools you want to be present in the plots
-    tls = "pan, box_zoom, box_select, wheel_zoom, reset, save, crosshair"
+    tls = "pan, tap, hover, box_zoom, box_select, wheel_zoom, reset, save, crosshair"
     ### define source to enable linked selection of genes between the plots
-    src = ColumnDataSource(data = dict(x0 = final_table['PromIde'], y0 = final_table['GeneIde'], x1 = final_table['PromSeg'], y1 = final_table['GeneSeg'], z0 = final_table['Gene'], z1 = final_table['ParentBC0']))
+    src = ColumnDataSource(data = dict(x0 = final_table['PromIde'], y0 = final_table['GeneIde'], x1 = final_table['PromSeg'], y1 = final_table['GeneSeg'], z0 = final_table['Gene'], z1 = final_table['BC0'], z2 = final_table['BC0-fun'], z3 = final_table['BC1-fun'], z4 = final_table['BC2-fun'], z5 = final_table['BC3-fun'], z6 = final_table['BC4-fun']))
+    ### add information boxes to an inspection tool (hover)
+    tltips = [('Gene', '@z0'),('Main group', '@z2'), ('Subgroups', '@z3'), ('', '@z4'), ('', '@z5'), ('', '@z6')]
 
-    ### extract BC groups' IDs from 'ParentBC0' column
+    ### extract BC groups' IDs from 'BC0' column
     groups = []
-    for zero in final_table['ParentBC0']:
+    for zero in final_table['BC0']:
         if zero not in groups:
             groups.append(zero)
     ### sort the groups alphabetically
     groups = sorted(groups)
 
-    ### extract descriptions to BC groups IDs
-    desc = []
-    for grp in groups:
-        for k in range(0, len(key['ID'])):
-            if (grp == key['ID'][k]):
-                desc.append(key['function'][k])
-
-    ### combine BC group IDs and their descriptions in a dictionaty
+    ### add function descriptions for the ID extracted from 'BC0' in a dictionary
     plot_key = {}
-    for i in range(0, len(groups)):
-        if all(['BC-' in groups[i], groups[i] not in plot_key.keys()]):
-            plot_key[desc[i]] = groups[i]
-    plot_key['ORFs'] = 'ORFs'
-    plot_key['CH-ORFs'] = 'Conserved-Hypothetical-ORFs'
-    plot_key['Unclassified'] = 'Unclassified-Genes'
+    for grp in groups:
+        for k in all_keys.keys():
+            if grp == k:
+                plot_key[all_keys[k]] = grp
 
     ### define views to distinguish BC groups during plotting
     view = {}
     for pk in sorted(plot_key.values()):
         view[pk] = CDSView(source = src, filters = [GroupFilter(column_name = 'z1', group = pk)])
-
-    ### define colours for plotting
-    cols = ['black', 'blue', 'red', 'green', 'orange', 'cyan', 'magenta', 'lime', 'purple', 'sienna']
 
     #########################################
     ########## 1st PLOT DEFINITION ##########
@@ -171,24 +200,14 @@ def main():
     else:
         mplot = mgene + 0.01
     ### set the figure dimension and other characteristics
-    pl1 = figure(tools = tls, plot_width = 800, plot_height = 800, x_range = (-0.012, mplot), y_range = (-0.012, mplot), x_axis_label = 'Promoters', y_axis_label = 'Genes')
+    pl1 = figure(tools = tls, tooltips = tltips, plot_width = 750, plot_height = 750, x_range = (-0.012, mplot), y_range = (-0.012, mplot), x_axis_label = 'Promoters', y_axis_label = 'Genes')
     ### set plot main title
     pl1.title.text = 'Proportion of segregating sites'
     ### set the Seg values to be in the plotted
     n = 0
     for v in list(plot_key.keys()):
-        pl1.scatter('x1', 'y1', source = src, view = view[plot_key[v]], legend_label = v, color = cols[n])
+        pl1.scatter('x1', 'y1', source = src, view = view[plot_key[v]], legend_label = v, color = Category10_10[n])
         n += 1
-    # pl1.text(fileBC0.PromSeg.loc['BC-1'], fileBC0.GeneSeg.loc['BC-1'], text = fileBC0.Gene.loc['BC-1'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Metabolism', color = 'black')
-    # pl1.text(fileBC0.PromSeg.loc['BC-2'], fileBC0.GeneSeg.loc['BC-2'], text = fileBC0.Gene.loc['BC-2'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Information transfer', color = 'blue')
-    # pl1.text(fileBC0.PromSeg.loc['BC-3'], fileBC0.GeneSeg.loc['BC-3'], text = fileBC0.Gene.loc['BC-3'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Regulation', color = 'red')
-    # pl1.text(fileBC0.PromSeg.loc['BC-4'], fileBC0.GeneSeg.loc['BC-4'], text = fileBC0.Gene.loc['BC-4'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Transport', color = 'green')
-    # pl1.text(fileBC0.PromSeg.loc['BC-5'], fileBC0.GeneSeg.loc['BC-5'], text = fileBC0.Gene.loc['BC-5'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Cell processes', color = 'orange')
-    # pl1.text(fileBC0.PromSeg.loc['BC-6'], fileBC0.GeneSeg.loc['BC-6'], text = fileBC0.Gene.loc['BC-6'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Cell structure', color = 'cyan')
-    # pl1.text(fileBC0.PromSeg.loc['BC-8'], fileBC0.GeneSeg.loc['BC-8'], text = fileBC0.Gene.loc['BC-8'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Extrachromosomal', color = 'magenta')
-    # pl1.text(fileBC0.PromSeg.loc['ORFs'], fileBC0.GeneSeg.loc['ORFs'], text = fileBC0.Gene.loc['ORFs'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'ORFs', color = 'lime')
-    # pl1.text(fileBC0.PromSeg.loc['Conserved-Hypothetical-ORFs'], fileBC0.GeneSeg.loc['Conserved-Hypothetical-ORFs'], text = fileBC0.Gene.loc['Conserved-Hypothetical-ORFs'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'CH-ORFs', color = 'purple')
-    # pl1.text(fileBC0.PromSeg.loc['Unclassified-Genes'], fileBC0.GeneSeg.loc['Unclassified-Genes'], text = fileBC0.Gene.loc['Unclassified-Genes'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Unclassified', color = 'sienna')
     ### set legend position and the attribute to hide/show it upon clicking in the legend
     pl1.legend.location = 'top_left'
     pl1.legend.click_policy = 'hide'
@@ -200,35 +219,29 @@ def main():
     mprom = round(max(final_table['PromIde']), 1)
     mgene = round(max(final_table['GeneIde']), 1)
     if (mprom > mgene):
-        mplot = mprom + 0.1
+        mplot = mprom + 0.4
     else:
-        mplot = mgene + 0.1
+        mplot = mgene + 0.4
 
     ### set the figure dimension and other characteristics
-    pl2 = figure(tools = tls, plot_width = 800, plot_height = 800, x_range = (-0.4, 8.5), y_range = (-0.4, 8.5), x_axis_label = 'Promoters', y_axis_label = 'Genes')
+    pl2 = figure(tools = tls, tooltips = tltips, plot_width = 750, plot_height = 750, x_range = (-0.4, mplot), y_range = (-0.4, mplot), x_axis_label = 'Promoters', y_axis_label = 'Genes')
     ### set plot main title
     pl2.title.text = '100 - average pairwise identity'
     ### set the Ide values to be in the plotted
     n = 0
     for v in list(plot_key.keys()):
-        pl2.scatter('x0', 'y0', source = src, view = view[plot_key[v]], legend_label = v, color = cols[n])
+        pl2.scatter('x0', 'y0', source = src, view = view[plot_key[v]], legend_label = v, color = Category10_10[n])
         n += 1
-    # pl2.text(fileBC0.PromIde.loc['BC-1'], fileBC0.GeneIde.loc['BC-1'], text = fileBC0.Gene.loc['BC-1'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Metabolism', color = 'black')
-    # pl2.text(fileBC0.PromIde.loc['BC-2'], fileBC0.GeneIde.loc['BC-2'], text = fileBC0.Gene.loc['BC-2'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Information transfer', color = 'blue')
-    # pl2.text(fileBC0.PromIde.loc['BC-3'], fileBC0.GeneIde.loc['BC-3'], text = fileBC0.Gene.loc['BC-3'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Regulation', color = 'red')
-    # pl2.text(fileBC0.PromIde.loc['BC-4'], fileBC0.GeneIde.loc['BC-4'], text = fileBC0.Gene.loc['BC-4'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Transport', color = 'green')
-    # pl2.text(fileBC0.PromIde.loc['BC-5'], fileBC0.GeneIde.loc['BC-5'], text = fileBC0.Gene.loc['BC-5'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Cell processes', color = 'orange')
-    # pl2.text(fileBC0.PromIde.loc['BC-6'], fileBC0.GeneIde.loc['BC-6'], text = fileBC0.Gene.loc['BC-6'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Cell structure', color = 'cyan')
-    # pl2.text(fileBC0.PromIde.loc['BC-8'], fileBC0.GeneIde.loc['BC-8'], text = fileBC0.Gene.loc['BC-8'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Extrachromosomal', color = 'magenta')
-    # pl2.text(fileBC0.PromIde.loc['ORFs'], fileBC0.GeneIde.loc['ORFs'], text = fileBC0.Gene.loc['ORFs'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'ORFs', color = 'lime')
-    # pl2.text(fileBC0.PromIde.loc['Conserved-Hypothetical-ORFs'], fileBC0.GeneIde.loc['Conserved-Hypothetical-ORFs'], text = fileBC0.Gene.loc['Conserved-Hypothetical-ORFs'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'CH-ORFs', color = 'purple')
-    # pl2.text(fileBC0.PromIde.loc['Unclassified-Genes'], fileBC0.GeneIde.loc['Unclassified-Genes'], text = fileBC0.Gene.loc['Unclassified-Genes'], y_offset = -2.5, x_offset = -7, text_font_size = {'value':'8pt'}, legend_label = 'Unclassified', color = 'sienna')
     ### set legend position and the attribute to hide/show it upon clicking in the legend
     pl2.legend.location = 'top_left'
     pl2.legend.click_policy = 'hide'
 
+    ### set layout, tab and panel for plot
+    lay0 = layout(gridplot([[pl2, pl1]]))
+    tab0 = Panel(child = lay0, title = 'Main function groups')
+    see = Tabs(tabs = [tab0])
     ### execute plotting of both defined plots
-    show(gridplot([[pl2, pl1]]))
+    show(see)
 
 if __name__ == '__main__':
     main()
